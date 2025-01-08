@@ -1,11 +1,7 @@
 const express = require('express');
 const router = express.Router();
-
-
 const { body, validationResult } = require('express-validator');
-
-//const bcrypt = require('bcrypt');
-
+const bcrypt = require('bcrypt');
 const User = require('../models/userModel');
 
 router.post("/login", async (req, res) => {
@@ -26,6 +22,17 @@ router.get("/", async (req, res) => {
         } catch (error) {
         console.log('Error al obtener los usuarios: ', error);
         return res.status(400).json({ message: 'Error al obtener los usuarios' });
+    }
+});
+
+
+router.get("/:id", async (req, res) => {
+    try {
+        const usuario = await User.findById(req.params.id);
+        if(!usuario) return res.status(404).json({ message: 'Usuario no encontrado'});
+        res.json(usuario)
+    } catch (error) {
+        return res.status(500).json({ message: 'Error al obtener el usuario' });
     }
 });
 
@@ -50,6 +57,11 @@ router.post("/register",
             .notEmpty().withMessage('El nombre es obligatorio')
             .isString().withMessage('El nombre debe ser de tipo texto')
             .trim(),
+            body('edad')
+            .isLength({ min: 1, max:  2}).withMessage('De 8 años en adelante')
+            .notEmpty().withMessage('La edad es obligatoria es obligatorio')
+            .isString().withMessage('La edad debe ser de tipo numero')
+            .trim(),
         body('email')
             .isLength({ min: 3, max: 45 }).withMessage('El email debe tener entre 3 y 45 caracteres')
             .notEmpty().withMessage('El nombre es obligatorio')
@@ -66,13 +78,14 @@ router.post("/register",
 
         const errores = validationResult(req);
 
-        const { nombre, email, password } = req.body;
+        const { nombre, edad, email, password } = req.body;
 
 
         console.log(errores)  
 
         const persona = {
             nombre,
+            edad,
             email,
             password
         }
@@ -91,10 +104,10 @@ router.post("/register",
             console.log(usuarioExiste);
 
 
-            //const salt = bcrypt.genSaltSync(10);
-            //console.log(salt);
+            const salt = bcrypt.genSaltSync(10);
+            console.log(salt);
 
-            //persona.password = await bcrypt.hashSync(password, salt);
+            persona.password = await bcrypt.hashSync(password, salt);
             console.log(persona.password);
 
             const newUser = new User(persona);
@@ -114,5 +127,62 @@ router.post("/register",
             }
 
     });
+
+    
+    router.put("/:id", 
+        [
+            body('nombre')
+                .optional()
+                .isLength({ min: 3, max: 20 }).withMessage('El nombre debe tener entre 3 y 20 caracteres')
+                .isString().withMessage('El nombre debe ser de tipo texto')
+                .trim(),
+            body('email')
+                .optional()
+                .isLength({ min: 3, max: 45 }).withMessage('El email debe tener entre 3 y 45 caracteres')
+                .isEmail().withMessage('El correo tiene que existir')
+                .trim(),
+            body('password')
+                .optional()
+                .isLength({ min: 8 }).withMessage('El password debe tener como mínimo 8 caracteres')
+                .isString().withMessage('El password debe ser de tipo texto')
+                .trim(),
+            body('Edad')
+                .optional()
+                .notEmpty().withMessage('Obligatorio'),
+        ], 
+        async (req, res) => {
+            const { id } = req.params;
+            const { nombre, email, password, Edad } = req.body;
+    
+            const errores = validationResult(req);
+            if (!errores.isEmpty()) {
+                return res.status(400).json({ errores: errores.array() });
+            }
+    
+            try {
+                const usuario = await User.findById(id);
+                if (!usuario) {
+                    return res.status(404).json({ message: 'Usuario no encontrado' });
+                }
+    
+                if (password) {
+                    const salt = bcrypt.genSaltSync(10);
+                    usuario.password = await bcrypt.hashSync(password, salt);
+                }
+    
+                usuario.nombre = nombre || usuario.nombre;
+                usuario.email = email || usuario.email;
+                usuario.edad = edad || usuario.edad;
+    
+                await usuario.save();
+    
+                return res.status(200).json({ message: 'Usuario actualizado correctamente' });
+            } catch (error) {
+                console.log('Error al actualizar el usuario:', error);
+                return res.status(400).json({ message: 'Error al actualizar el usuario' });
+            }
+        }
+    );
+
 
 module.exports = router; 
