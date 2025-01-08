@@ -146,13 +146,13 @@ router.post("/register",
                 .isLength({ min: 8 }).withMessage('El password debe tener como mínimo 8 caracteres')
                 .isString().withMessage('El password debe ser de tipo texto')
                 .trim(),
-            body('Edad')
+            body('edad')
                 .optional()
                 .notEmpty().withMessage('Obligatorio'),
         ], 
         async (req, res) => {
             const { id } = req.params;
-            const { nombre, email, password, Edad } = req.body;
+            const { nombre, email, password, edad } = req.body;
     
             const errores = validationResult(req);
             if (!errores.isEmpty()) {
