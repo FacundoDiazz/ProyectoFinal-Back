@@ -6,6 +6,8 @@ const path = require('path');
 const morgan = require('morgan');
 const cors = require('cors');
 
+const bcrypt = require('bcrypt');
+
 const dotenv = require('dotenv');
 dotenv.config();
 
